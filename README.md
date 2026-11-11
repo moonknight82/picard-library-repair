@@ -1,6 +1,6 @@
 # Library Repair for MusicBrainz Picard 3
 
-Library Repair audits music folders for missing artist, album artist, album, title, track and disc tags, missing embedded front art, missing album-folder art, and `CD1` / `Disc 1` style subfolders. Healthy albums stay out of the results.
+Library Repair audits music folders for missing artist, album artist, album, title, track and disc tags, missing embedded front art, missing album-folder art, and `CD1` / `Disc 1` style subfolders. Healthy albums stay out of the results. After Picard saves a track, Library Repair also creates a missing `cover.jpg` from available front art, including art already embedded in that track when MusicBrainz supplied no new image. Existing covers are never overwritten, and audio is not rewritten by this cover step.
 
 ## Install from GitHub
 
@@ -20,6 +20,8 @@ Install and enable **Library Repair**, then use **Tools → Library Repair → A
 4. Choose **Select tag/artwork albums**, then **Open selected in Picard** for MusicBrainz matching and manual review. You can run a full scan again after changes made outside the plugin.
 
 If a storage I/O error stops a batch, Library Repair leaves unfinished source files in place and refreshes only the albums it reached. Review a new plan before resuming; completed tracks already in the album root are not moved again. On removable media, check the card connection and filesystem before retrying a timeout.
+
+The automatic `cover.jpg` step applies to tracks saved **after** this plugin version is loaded. Previously saved folders can be loaded and saved again in Picard. Albums with no usable front art remain flagged for review.
 
 The plugin's reviewed consolidation moves tracks from disc subfolders into the album root as `1.01 Song.flac`, `2.01 Song.flac`, and so on. It retains separate numeric disc and track tags, never overwrites an existing destination, and removes empty disc folders only after successful moves. Review the preview and conflicts before applying changes to your library.
 

@@ -1,7 +1,7 @@
 uuid = "d37e3790-66bd-4df8-8128-64bbd50d4571"
 name = "Library Repair"
 authors = ["Thiago and Codex"]
-description = "Audit album tags and artwork, and preview safe multi-disc folder consolidation"
+description = "Audit album tags and artwork, save missing folder covers, and preview safe multi-disc consolidation"
 api = ["3.0"]
 license = "GPL-2.0-or-later"
 license_url = "https://www.gnu.org/licenses/gpl-2.0.html"
