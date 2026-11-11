@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .core import AlbumReport, MovePlan, apply_consolidation, plan_consolidation, scan_library
+from .picard_clusters import add_reports_as_clusters
 
 
 class ScanThread(QThread):
@@ -224,7 +225,7 @@ class LibraryRepairDialog(QDialog):
         self.select_discs_button.clicked.connect(self.select_disc_albums)
         self.select_tags_button = QPushButton("Select tag/artwork albums")
         self.select_tags_button.clicked.connect(self.select_tag_albums)
-        self.open_button = QPushButton("Open selected in Picard")
+        self.open_button = QPushButton("Add selected as Picard clusters")
         self.open_button.clicked.connect(self.open_in_picard)
         self.preview_button = QPushButton("Review consolidations…")
         self.preview_button.clicked.connect(self.preview_moves)
@@ -354,12 +355,18 @@ class LibraryRepairDialog(QDialog):
         chosen = self.selected_reports()
         if not chosen:
             return
-        paths = [str(track.path) for report in chosen for track in report.tracks if track.path.exists()]
-        if not paths:
-            QMessageBox.information(self, "No files", "The selected albums have no existing audio files.")
+        albums, files, pending = add_reports_as_clusters(self.api.tagger, chosen)
+        if not files:
+            message = (
+                "The selected files are still loading in Picard; try again when loading finishes."
+                if pending else "The selected albums have no available audio files."
+            )
+            QMessageBox.information(self, "No files added", message)
             return
-        self.api.tagger.add_files(paths)
-        self.status.setText(f"Loaded {len(paths)} files into Picard; review matches before saving")
+        message = f"Added {files} files in {albums} folder-based Picard clusters. Scan or lookup manually."
+        if pending:
+            message += f" Skipped {pending} files still loading in Picard."
+        self.status.setText(message)
 
     def preview_moves(self):
         chosen = self.selected_reports()

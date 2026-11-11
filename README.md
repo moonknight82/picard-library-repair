@@ -17,7 +17,7 @@ Install and enable **Library Repair**, then use **Tools → Library Repair → A
 1. Scan a music folder. The list separates disc-folder issues from metadata and artwork issues.
 2. Choose **Select all disc-folder albums**, then **Review consolidations…**. The review window shows each album's moves and conflicts. Only ready albums are checked for application; you can uncheck any of them.
 3. Apply the checked albums. Library Repair rescans those album folders and removes only albums with no remaining problems. Conflicts and tag/artwork problems stay visible.
-4. Choose **Select tag/artwork albums**, then **Open selected in Picard** for MusicBrainz matching and manual review. You can run a full scan again after changes made outside the plugin.
+4. Choose **Select tag/artwork albums**, then **Add selected as Picard clusters**. Each exact album folder gets its own cluster in Picard's left panel, even if another artist has an album with the same title. This action does not start an automatic lookup or scan; choose Picard's **Lookup** or **Scan** yourself for each cluster. You can run a full audit again after changes made outside the plugin.
 
 If a storage I/O error stops a batch, Library Repair leaves unfinished source files in place and refreshes only the albums it reached. Review a new plan before resuming; completed tracks already in the album root are not moved again. On removable media, check the card connection and filesystem before retrying a timeout.
 
