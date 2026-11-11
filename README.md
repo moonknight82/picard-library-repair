@@ -23,6 +23,8 @@ If a storage I/O error stops a batch, Library Repair leaves unfinished source fi
 
 The plugin's reviewed consolidation moves tracks from disc subfolders into the album root as `1.01 Song.flac`, `2.01 Song.flac`, and so on. It retains separate numeric disc and track tags, never overwrites an existing destination, and removes empty disc folders only after successful moves. Review the preview and conflicts before applying changes to your library.
 
+For files whose disc and track tags are already correct, macOS uses an exclusive same-volume rename when the destination filesystem supports it. This avoids rewriting the audio. Files needing tag edits, and volumes without exclusive rename support, use the original exclusive-create, verified-copy path. The FAT32 SD volume tested with this project did **not** support exclusive rename; it therefore still needs the copy path. The plugin does not silently switch to a normal rename that could overwrite a destination.
+
 Picard 3's Git plugin installer can check this repository for updates. Device playback and album grouping should still be checked on your player after a sample album is repaired.
 
 Licensed under GPL-2.0-or-later. See [COPYING.txt](COPYING.txt).

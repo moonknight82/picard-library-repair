@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+import ctypes
+import errno
 import hashlib
 import os
 import re
 import shutil
+import sys
 import threading
 import unicodedata
 from typing import Callable
@@ -381,6 +384,56 @@ def _sha256_file(path: Path) -> bytes:
     return digest.digest()
 
 
+def _rename_exclusive(source: Path, destination: Path) -> bool:
+    """Rename without replacement on macOS; return False if unavailable.
+
+    A regular os.rename can overwrite the destination, so unsupported volumes
+    must use the exclusive-create and verified-copy path instead.
+    """
+    if sys.platform != "darwin":
+        return False
+    rename = getattr(ctypes.CDLL(None, use_errno=True), "renamex_np", None)
+    if rename is None:
+        return False
+    rename.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint)
+    rename.restype = ctypes.c_int
+    if rename(os.fsencode(source), os.fsencode(destination), 0x00000004) == 0:  # RENAME_EXCL
+        return True
+    code = ctypes.get_errno()
+    if code in {errno.ENOTSUP, errno.EOPNOTSUPP, errno.ENOSYS, errno.EINVAL, errno.EXDEV}:
+        return False
+    raise OSError(code, os.strerror(code), str(destination))
+
+
+def _copy_verified(action: MoveAction) -> None:
+    """Preserve the source until its exclusive destination copy is verified."""
+    created = False
+    try:
+        source_digest = hashlib.sha256()
+        with action.source.open("rb") as incoming, action.destination.open("xb") as outgoing:
+            created = True
+            for chunk in iter(lambda: incoming.read(1024 * 1024), b""):
+                source_digest.update(chunk)
+                outgoing.write(chunk)
+        if _sha256_file(action.destination) != source_digest.digest():
+            raise IOError(f"Copy checksum mismatch: {action.destination}")
+        current_stat = action.source.stat()
+        if current_stat.st_size != action.size or current_stat.st_mtime_ns != action.mtime_ns:
+            raise ValueError(f"Source changed during copy: {action.source}")
+        shutil.copystat(action.source, action.destination)
+        if action.destination.stat().st_size != action.size:
+            raise IOError(f"Incomplete copy: {action.destination}")
+        _write_numbers(action.destination, action.tag_updates)
+        action.source.unlink()
+    except Exception:
+        if created and action.source.exists() and action.destination.exists():
+            try:
+                action.destination.unlink()
+            except OSError:
+                pass
+        raise
+
+
 def apply_consolidation(plan: MovePlan, progress: Callable[[int, int, Path], None] | None = None) -> ApplyResult:
     """Apply an approved plan. Each source is retained until its destination is complete."""
     result = ApplyResult()
@@ -401,27 +454,19 @@ def apply_consolidation(plan: MovePlan, progress: Callable[[int, int, Path], Non
     if result.errors:
         return result
     for action in plan.actions:
-        created = False
+        renamed = False
         try:
             destination_sidecar = action.destination.with_name("._" + action.destination.name)
             destination_sidecar_existed = destination_sidecar.exists()
-            # O_EXCL guarantees an existing destination is never overwritten.
-            source_digest = hashlib.sha256()
-            with action.source.open("rb") as incoming, action.destination.open("xb") as outgoing:
-                created = True
-                for chunk in iter(lambda: incoming.read(1024 * 1024), b""):
-                    source_digest.update(chunk)
-                    outgoing.write(chunk)
-            if _sha256_file(action.destination) != source_digest.digest():
-                raise IOError(f"Copy checksum mismatch: {action.destination}")
             current_stat = action.source.stat()
             if current_stat.st_size != action.size or current_stat.st_mtime_ns != action.mtime_ns:
-                raise ValueError(f"Source changed during copy: {action.source}")
-            shutil.copystat(action.source, action.destination)
-            if action.destination.stat().st_size != action.size:
-                raise IOError(f"Incomplete copy: {action.destination}")
-            _write_numbers(action.destination, action.tag_updates)
-            action.source.unlink()
+                raise ValueError(f"Source changed since preview: {action.source}")
+            # Files needing tag edits retain the verified-copy path so a tag
+            # write failure cannot alter the only copy of the source.
+            if not action.tag_updates:
+                renamed = _rename_exclusive(action.source, action.destination)
+            if not renamed:
+                _copy_verified(action)
             result.moved.append(action.destination)
             if progress:
                 progress(len(result.moved), len(plan.actions), action.destination)
@@ -445,12 +490,6 @@ def apply_consolidation(plan: MovePlan, progress: Callable[[int, int, Path], Non
                 except OSError as exc:
                     result.errors.append(f"Could not remove new sidecar {destination_sidecar}: {exc}")
         except Exception as exc:
-            # Keep the original if this action did not complete.
-            if created and action.source.exists() and action.destination.exists():
-                try:
-                    action.destination.unlink()
-                except OSError:
-                    pass
             result.errors.append(f"Could not move {action.source}: {exc}")
             break
     for disc_dir in sorted({a.source.parent for a in plan.actions}):
