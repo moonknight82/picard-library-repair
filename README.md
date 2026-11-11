@@ -19,6 +19,8 @@ Install and enable **Library Repair**, then use **Tools → Library Repair → A
 3. Apply the checked albums. Library Repair rescans those album folders and removes only albums with no remaining problems. Conflicts and tag/artwork problems stay visible.
 4. Choose **Select tag/artwork albums**, then **Open selected in Picard** for MusicBrainz matching and manual review. You can run a full scan again after changes made outside the plugin.
 
+If a storage I/O error stops a batch, Library Repair leaves unfinished source files in place and refreshes only the albums it reached. Review a new plan before resuming; completed tracks already in the album root are not moved again. On removable media, check the card connection and filesystem before retrying a timeout.
+
 The plugin's reviewed consolidation moves tracks from disc subfolders into the album root as `1.01 Song.flac`, `2.01 Song.flac`, and so on. It retains separate numeric disc and track tags, never overwrites an existing destination, and removes empty disc folders only after successful moves. Review the preview and conflicts before applying changes to your library.
 
 Picard 3's Git plugin installer can check this repository for updates. Device playback and album grouping should still be checked on your player after a sample album is repaired.

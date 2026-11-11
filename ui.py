@@ -175,6 +175,7 @@ class LibraryRepairDialog(QDialog):
         self.worker: ScanThread | None = None
         self.refresh_worker: RefreshThread | None = None
         self.apply_worker: ApplyThread | None = None
+        self._last_apply_summary = ""
         self.setWindowTitle("Library Repair")
         self.resize(1000, 660)
         layout = QVBoxLayout(self)
@@ -390,13 +391,21 @@ class LibraryRepairDialog(QDialog):
             moved += len(result.moved)
             removed_dirs += len(result.removed_dirs)
             errors.extend(result.errors)
-        summary = f"Moved {moved} files and removed {removed_dirs} empty disc folders."
+        attempted = len(results)
+        completed = sum(not result.errors for result in results)
+        summary = (
+            f"Completed {completed} of {len(plans)} albums; moved {moved} files "
+            f"and removed {removed_dirs} empty disc folders."
+        )
         if errors:
+            failed_album = plans[attempted - 1].album if attempted else plans[0].album
+            summary += f" Stopped at {failed_album}."
             QMessageBox.warning(self, "Consolidation stopped", summary + "\n\n" + "\n".join(errors))
         else:
             QMessageBox.information(self, "Consolidation complete", summary)
+        self._last_apply_summary = summary
         self.status.setText(summary + " Refreshing affected albums…")
-        self.refresh_worker = RefreshThread([plan.album for plan in plans], self)
+        self.refresh_worker = RefreshThread([plan.album for plan in plans[:attempted]], self)
         self.refresh_worker.refreshed.connect(self._refresh_complete)
         self.refresh_worker.failed.connect(self._refresh_failed)
         self.refresh_worker.finished.connect(self._refresh_finished)
@@ -411,7 +420,10 @@ class LibraryRepairDialog(QDialog):
                 kept[root] = report
         self.reports = list(kept.values())
         self.render_reports()
-        self.status.setText(f"Refreshed {len(refreshed)} albums · {len(self.reports)} problem albums remain")
+        self.status.setText(
+            f"{self._last_apply_summary} Refreshed {len(refreshed)} albums; "
+            f"{len(self.reports)} problem albums remain"
+        )
 
     def _refresh_failed(self, message):
         self.status.setText("Refresh failed; run a full scan")

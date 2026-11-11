@@ -403,6 +403,8 @@ def apply_consolidation(plan: MovePlan, progress: Callable[[int, int, Path], Non
     for action in plan.actions:
         created = False
         try:
+            destination_sidecar = action.destination.with_name("._" + action.destination.name)
+            destination_sidecar_existed = destination_sidecar.exists()
             # O_EXCL guarantees an existing destination is never overwritten.
             source_digest = hashlib.sha256()
             with action.source.open("rb") as incoming, action.destination.open("xb") as outgoing:
@@ -433,6 +435,15 @@ def apply_consolidation(plan: MovePlan, progress: Callable[[int, int, Path], Non
                         result.errors.append(f"Sidecar changed since preview; retained {action.sidecar}")
                 except OSError as exc:
                     result.errors.append(f"Could not remove sidecar {action.sidecar}: {exc}")
+            # macOS can create a new AppleDouble sidecar on FAT32 while
+            # copying timestamps or writing tags. Remove only one created
+            # during this move, after the audio has been verified and moved.
+            if not destination_sidecar_existed and destination_sidecar.is_file() and not destination_sidecar.is_symlink():
+                try:
+                    destination_sidecar.unlink()
+                    result.removed_sidecars.append(destination_sidecar)
+                except OSError as exc:
+                    result.errors.append(f"Could not remove new sidecar {destination_sidecar}: {exc}")
         except Exception as exc:
             # Keep the original if this action did not complete.
             if created and action.source.exists() and action.destination.exists():
