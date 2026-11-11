@@ -1,6 +1,6 @@
 # Library Repair for MusicBrainz Picard 3
 
-Library Repair audits music folders for missing artist, album artist, album, title, track and disc tags, missing embedded front art, missing album-folder art, and `CD1` / `Disc 1` style subfolders. Healthy albums stay out of the results. You can open selected albums in Picard for MusicBrainz matching and review a multi-disc consolidation before applying it.
+Library Repair audits music folders for missing artist, album artist, album, title, track and disc tags, missing embedded front art, missing album-folder art, and `CD1` / `Disc 1` style subfolders. Healthy albums stay out of the results.
 
 ## Install from GitHub
 
@@ -11,6 +11,13 @@ https://github.com/moonknight82/picard-library-repair
 ```
 
 Install and enable **Library Repair**, then use **Tools → Library Repair → Audit music folders…**. The plugin uses Picard's bundled Mutagen and PyQt6; no API key is needed.
+
+## Workflow
+
+1. Scan a music folder. The list separates disc-folder issues from metadata and artwork issues.
+2. Choose **Select all disc-folder albums**, then **Review consolidations…**. The review window shows each album's moves and conflicts. Only ready albums are checked for application; you can uncheck any of them.
+3. Apply the checked albums. Library Repair rescans those album folders and removes only albums with no remaining problems. Conflicts and tag/artwork problems stay visible.
+4. Choose **Select tag/artwork albums**, then **Open selected in Picard** for MusicBrainz matching and manual review. You can run a full scan again after changes made outside the plugin.
 
 The plugin's reviewed consolidation moves tracks from disc subfolders into the album root as `1.01 Song.flac`, `2.01 Song.flac`, and so on. It retains separate numeric disc and track tags, never overwrites an existing destination, and removes empty disc folders only after successful moves. Review the preview and conflicts before applying changes to your library.
 
