@@ -1,6 +1,6 @@
 # Library Repair for MusicBrainz Picard 3
 
-Library Repair audits music folders for missing artist, album artist, album, title, track and disc tags, missing embedded front art, missing album-folder art, and `CD1` / `Disc 1` style subfolders. Healthy albums stay out of the results. After Picard saves a track, Library Repair also creates a missing `cover.jpg` from available front art, including art already embedded in that track when MusicBrainz supplied no new image. Existing covers are never overwritten, and audio is not rewritten by this cover step.
+Library Repair audits music folders for missing artist, album artist, album, title, track and disc tags, missing embedded front art, missing album-folder art, and `CD1` / `Disc 1` style subfolders. DSF and DFF (DSDIFF) files are included in the audit and reviewed consolidation. Healthy albums stay out of the results. After Picard saves a track, Library Repair also creates a missing `cover.jpg` from available front art, including art already embedded in that track when MusicBrainz supplied no new image. Existing covers are never overwritten, and audio is not rewritten by this cover step.
 
 ## Install from GitHub
 

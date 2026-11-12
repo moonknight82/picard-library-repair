@@ -16,14 +16,14 @@ import unicodedata
 from typing import Callable
 
 from mutagen import File as MutagenFile
-from mutagen.id3 import TPOS, TRCK
+from mutagen.id3 import ID3, TPOS, TRCK
 from mutagen.mp4 import MP4
 
 
 AUDIO_EXTENSIONS = {
     ".mp3", ".flac", ".m4a", ".mp4", ".ogg", ".oga", ".opus",
     ".wv", ".ape", ".wma", ".mp2", ".wav", ".aiff", ".aif",
-    ".tak", ".mpc",
+    ".tak", ".mpc", ".dsf", ".dff",
 }
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MOVABLE_EXTRA_EXTENSIONS = IMAGE_EXTENSIONS | {".pdf"}
@@ -348,6 +348,8 @@ def _write_numbers(path: Path, updates: dict[str, int]) -> None:
     audio = MutagenFile(path)
     if audio is None:
         raise ValueError(f"Cannot write tags: {path}")
+    if audio.tags is None:
+        audio.add_tags()
     tags = audio.tags
     if isinstance(audio, MP4):
         if "discnumber" in updates:
@@ -356,12 +358,7 @@ def _write_numbers(path: Path, updates: dict[str, int]) -> None:
         if "tracknumber" in updates:
             total = tags.get("trkn", [(0, 0)])[0][1]
             tags["trkn"] = [(updates["tracknumber"], total)]
-    elif hasattr(tags, "add") and any(str(k).startswith("TRCK") or str(k).startswith("TPOS") for k in tags.keys()):
-        if "discnumber" in updates:
-            tags.add(TPOS(encoding=3, text=str(updates["discnumber"])))
-        if "tracknumber" in updates:
-            tags.add(TRCK(encoding=3, text=str(updates["tracknumber"])))
-    elif path.suffix.lower() == ".mp3":
+    elif isinstance(tags, ID3):
         if "discnumber" in updates:
             tags.add(TPOS(encoding=3, text=str(updates["discnumber"])))
         if "tracknumber" in updates:
